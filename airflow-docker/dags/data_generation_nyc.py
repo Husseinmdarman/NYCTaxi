@@ -13,6 +13,10 @@ def lookup_nyc_data():
     Lookup function for NYC Taxi dataset metadata.
     
     """
+    
+    lookup_base = Path("/Data/lookups") 
+    lookup_base.mkdir(parents=True, exist_ok=True)
+
     vendorIDLookup = { 
         1: "Creative Mobile Technologies, LLC",
         2: "Curb Mobility, LLC",
@@ -48,10 +52,10 @@ def lookup_nyc_data():
 
     PaymentTypeLookup_df = pd.DataFrame(list(paymentTypeLookup.items()), columns=['PaymentTypeID', 'PaymentTypeDescription'])
 
-    lookup_path_rate_code = Path("airflow-docker/Data/lookups/RateCodeLookup.csv") # Check if file exists 
-    lookup_path_payment_type = Path("airflow-docker/Data/lookups/PaymentTypeLookup.csv")
-    lookup_path_vendor_id = Path("airflow-docker/Data/lookups/VendorIDLookup.csv")
-    lookup_path_taxi_zone = Path("airflow-docker/Data/lookups/TaxiZoneLookup.csv")
+    lookup_path_rate_code = lookup_base / "RateCodeLookup.csv" 
+    lookup_path_payment_type = lookup_base / "PaymentTypeLookup.csv" 
+    lookup_path_vendor_id = lookup_base / "VendorIDLookup.csv" 
+    lookup_path_taxi_zone = lookup_base / "TaxiZoneLookup.csv"
     
     s3 = boto3.client("s3", region_name="eu-west-2")
     bucket_name = "lookup-nyc-data"
@@ -207,8 +211,11 @@ with DAG(
         provide_context=True,
     )
     upload_lookups = PythonOperator(
-        task_id = ""
+        task_id = "lookup_nyc_data",
+        python_callable= lookup_nyc_data,
+        provide_context = True,
+
     )
 
-    download_task >> upload_task
+    download_task >> [upload_task, upload_lookups]
 
